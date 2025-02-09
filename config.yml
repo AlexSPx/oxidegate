@@ -1,0 +1,11 @@
+frontends:
+  - path_prefixes: 
+      - "/hello_world"
+    backend: "hello-world-backend"
+
+backends:
+  - name: "hello-world-backend"
+    servers:
+      - "http://localhost:3001"
+      - "http://localhost:3002"
+    lb_algorithm: RoundRobin
