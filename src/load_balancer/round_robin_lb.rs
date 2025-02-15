@@ -1,6 +1,6 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
 
-use super::factory::LoadBalancer;
+use super::factory::{LoadBalancer, SelectedLB};
 
 pub struct RoundRobinStrategy {
     servers: Vec<String>,
@@ -19,12 +19,19 @@ impl RoundRobinStrategy {
 
 #[async_trait::async_trait]
 impl LoadBalancer for RoundRobinStrategy {
-    async fn next(&self) -> Option<String> {
+    async fn next(&self) -> Option<Arc<SelectedLB>> {
         let current = self.current.fetch_add(1, Ordering::Relaxed);
         let server = self.servers.get(current % self.servers.len())?;
 
         log::debug!("RoundRobinStrategy selected server: {}", server);
 
-        Some(server.clone())
+        let empty_fn = Box::new(move || {});
+
+        Some(Arc::new(
+            SelectedLB {
+                server: server.clone(),
+                cleanup_fn: empty_fn,
+            }
+        ))
     }
 }

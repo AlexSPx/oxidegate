@@ -1,13 +1,15 @@
-use std::{convert::Infallible, sync::Arc};
-
+use std::sync::Arc;
 use config::load_config;
-use hyper::{service::{make_service_fn, service_fn}, Body, Request, Response, Server};
-use proxy::ProxyHandler;
+use load_balancer::factory::{LoadBalancer, LoadBalancerFactory};
+use proxy_service::{proxy_bridge::ProxyBridge, proxy_handler::ProxyHandler};
+use server::server_manager::ServerManager;
+use types::Frontend;
 
 mod types;
 mod load_balancer;
-mod proxy;
+mod proxy_service;
 mod config;
+mod server; 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
@@ -21,65 +23,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         },
     };
 
-    let proxy_handlers: Arc<Vec<(types::Frontend, Arc<ProxyHandler>)>> = Arc::new(config.iter().map(|(frontend, balancer)| {
+    let connections: Vec<(Frontend, Arc<dyn LoadBalancer>)> = config.frontends.iter().map(|frontend| {
+        let backend = config.backends.iter().find(|backend| backend.name == frontend.backend).unwrap();
+        let balancer = LoadBalancerFactory::create(backend.lb_algorithm, backend.servers.clone());
+
+        (frontend.clone(), balancer)
+    }).collect::<Vec<_>>();
+
+    let proxy_handlers: Arc<Vec<(types::Frontend, Arc<ProxyHandler>)>> = Arc::new(connections.iter().map(|(frontend, balancer)| {
         let handler = ProxyHandler::new(balancer.to_owned());
         (frontend.clone(), Arc::new(handler))
     }).collect::<Vec<_>>());
 
-    let http_addr = ([0, 0, 0, 0], 3000).into();
+    let proxy_bridge: Arc<ProxyBridge> = Arc::new(ProxyBridge::new(proxy_handlers));
 
-    let make_svc = make_service_fn(move |_| {
-        let proxy_handlers = Arc::clone(&proxy_handlers);
-        async move {
-            Ok::<_, Infallible>(service_fn(move |req: Request<Body>| {
-                let proxy_handlers = Arc::clone(&proxy_handlers);
-                async move {
+    let server_manager = ServerManager::new(config.server, proxy_bridge);
 
-                    let handler = proxy_handlers.iter().find(|(frontend, _)| {
-                        frontend.path_prefix.iter().any(|prefix| req.uri().path().starts_with(prefix))
-                    });
-                    
-                    match handler {
-                        Some((_, handler)) => handler.handle(req).await,
-                        None => {
-                            Ok(Response::builder()
-                                .status(404)
-                                .body(Body::from("Not Found"))
-                                .unwrap())
-                        }
-                    }
-                }
-            }))
-        }
-    });
-
-    let http_server = Server::bind(&http_addr).serve(make_svc);
-
-    log::info!("Server running on http://{}", http_addr);
-
-    let graceful = http_server.with_graceful_shutdown(shutdown_signal());
-
-    if let Err(e) = graceful.await {
-        log::error!("Server error: {}", e);
-    }
-
-    log::info!("Server stopped.");
-
-    Ok(())
-}
-
-async fn shutdown_signal() {
-    use tokio::signal::unix::{signal, SignalKind};
-
-    let mut sigint = signal(SignalKind::interrupt()).unwrap();
-    let mut sigterm = signal(SignalKind::terminate()).unwrap();
-
-    tokio::select! {
-        _ = sigint.recv() => log::info!("Received SIGINT (Ctrl+C)"),
-        _ = sigterm.recv() => log::info!("Received SIGTERM (Termination)"),
-    }
-
-    log::info!("Shutdown signal received. Exiting...");
-
-    std::process::exit(0);
+    server_manager.start_server().await
 }

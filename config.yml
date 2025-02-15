@@ -1,11 +1,24 @@
+server:
+  enable_https: false
+  key_path: "certs/key.pem"
+  cert_path: "certs/cert.pem"
+
 frontends:
   - path_prefixes: 
       - "/hello_world"
+      - "/hello_world/*"
+      - "/cant"
     backend: "hello-world-backend"
+  - path_prefixes:
+      - "/test"
+    backend: "test-backend"
 
 backends:
+  - name: "test-backend"
+    servers:
+      - server: "http://localhost:3003"
   - name: "hello-world-backend"
     servers:
-      - "http://localhost:3001"
-      - "http://localhost:3002"
-    lb_algorithm: RoundRobin
+      - server: "http://localhost:3001"
+      - server: "http://localhost:3002"
+    lb_algorithm: LeastConnections
