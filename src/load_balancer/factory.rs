@@ -5,7 +5,14 @@ use super::{least_connections_lb::LeastConnectionsStrategy, round_robin_lb::Roun
 
 pub struct SelectedLB {
     pub server: String,
-    pub cleanup_fn: Box<dyn FnOnce() -> () + Send + Sync>,
+    pub cleanup_fn: Box<dyn Fn() -> () + Send + Sync>,
+}
+
+impl Drop for SelectedLB {
+    fn drop(&mut self) {
+        log::debug!("Running cleanup on LB: {}", self.server);
+        (self.cleanup_fn)();
+    }
 }
 
 #[async_trait::async_trait]
