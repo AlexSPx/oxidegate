@@ -2,7 +2,8 @@ use std::sync::Arc;
 use config::load_config;
 use load_balancer::factory::{LoadBalancer, LoadBalancerFactory};
 use proxy_service::{proxy_bridge::ProxyBridge, proxy_handler::ProxyHandler};
-use server::server_manager::ServerManager;
+use server::{http::start_http_server, https::start_https_server, server_manager::ServerManager};
+// use server::server_manager::ServerManager;
 use types::Frontend;
 
 mod types;
@@ -41,3 +42,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     server_manager.start_server().await
 }
+

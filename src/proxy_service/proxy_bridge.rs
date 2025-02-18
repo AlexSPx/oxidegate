@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use axum::{body::Body, extract::Request, response::Response};
+use hyper::{body::Incoming, Request, Response, StatusCode};
 use crate::types::Frontend;
 
-use super::proxy_handler::ProxyHandler;
+use super::{gateway_body::GatewayBody, proxy_handler::ProxyHandler};
 
 pub struct ProxyBridge {
     proxy_handlers: Arc<Vec<(Frontend, Arc<ProxyHandler>)>>
@@ -16,7 +16,7 @@ impl ProxyBridge {
         }
     }
 
-    pub async fn determine(&self, req: Request) -> Response {
+    pub async fn determine(&self, req: Request<Incoming>) -> Response<GatewayBody> {
         log::info!("Request recieced with path: {:?}", req.uri().path());
 
         let path = req.uri().path();
@@ -38,11 +38,11 @@ impl ProxyBridge {
         match handler {
             Some((_, handler)) => {
                 handler.handle(req).await
-            },
+                        },
             None => {
                 Response::builder()
-                    .status(404)
-                    .body(Body::from("Not Found"))
+                    .status(StatusCode::SERVICE_UNAVAILABLE)
+                    .body(GatewayBody::Empty)
                     .unwrap()
             }
         }

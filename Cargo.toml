@@ -7,10 +7,8 @@ edition = "2021"
 
 hyper = { version = "1", features = ["full"] }
 tokio = { version = "1.0", features = ["full"] }
-axum = "0.8.1"
 
 hyper-util = { version = "0.1", features = ["full"] }
-http-body-util = "0.1"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
@@ -20,8 +18,7 @@ log = { version = "0.4", features = ["std", "serde"] }
 env_logger = "0.11.6"
 
 tokio-rustls = "0.26"
-tower-service = "0.3.2"
-tower = { version = "0.5.2", features = ["make", "util"] }
+hyper-rustls = "0.27.5"
 
 [dev-dependencies]
 mockall = "0.11"

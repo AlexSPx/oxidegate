@@ -21,4 +21,4 @@ backends:
     servers:
       - server: "http://localhost:3001"
       - server: "http://localhost:3002"
-    lb_algorithm: LeastConnections
+    lb_algorithm: RoundRobin

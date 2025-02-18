@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use cloud_native_proxy::{types::BackendServer, LbAlgorithm, LeastConnectionsStrategy, LoadBalancer, LoadBalancerFactory, RoundRobinStrategy, WeightedRoundRobin};
-    use std::{collections::HashMap, sync::atomic::Ordering};
+    use std::{collections::HashMap, sync::{atomic::Ordering, Arc}};
 
     #[tokio::test]
     async fn test_least_connections_strategy() {
@@ -19,6 +19,11 @@ mod tests {
         let selected = strategy.next().await.unwrap();
         assert_eq!(selected.server, "server2");
         assert_eq!(strategy.servers[1].1.load(Ordering::Relaxed), 1);
+
+        match Arc::try_unwrap(selected) {
+            Ok(lb) => (lb.cleanup_fn)(),
+            Err(_) => todo!(),
+        }
 
         let selected = strategy.next().await.unwrap();
         assert_eq!(selected.server, "server3");

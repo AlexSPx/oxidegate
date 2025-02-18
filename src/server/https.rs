@@ -1,48 +1,47 @@
-use std::{path::{Path, PathBuf}, pin::Pin, sync::Arc};
+use std::{net::{Ipv4Addr, SocketAddr}, path::{Path, PathBuf}, sync::Arc};
 
-use axum::{extract::Request, Router};
-use hyper::body::Incoming;
+use hyper::{body::Incoming, service::service_fn, Request, Response};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 use tokio::net::TcpListener;
 use tokio_rustls::{rustls::{pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer}, ServerConfig}, TlsAcceptor};
-use tower_service::Service;
 
-pub async fn start_https_server(mut app: Router, tcp_listener: TcpListener) -> Result<(), Box<dyn std::error::Error>> {
+use crate::proxy_service::{gateway_body::GatewayBody, proxy_bridge::ProxyBridge};
+
+pub async fn start_https_server(address: SocketAddr, proxy_bridge: Arc<ProxyBridge>) -> Result<(), Box<dyn std::error::Error>> {
     let rustls_config =  rustls_server_config(
       PathBuf::from("certs/key.pem"),
         PathBuf::from("certs/cert.pem"),  
     )?;
 
+
+    let tcp_listener = TcpListener::bind(&address).await?;
     let tls_acceptor = TlsAcceptor::from(rustls_config);
 
-    Pin::new(&mut app);
     loop {
-        let tower_service: Router = app.clone();
+        let (tcp_stream, _) = tcp_listener.accept().await?;
+
         let tls_acceptor = tls_acceptor.clone();
-        
-        let (cnx, addr) = tcp_listener.accept().await.unwrap();
-    
+        let proxy_bridge = Arc::clone(&proxy_bridge);
+
+        let service = Arc::new(service_fn(move |req| wrapper(req, proxy_bridge.clone())));
         tokio::spawn(async move {
-            let Ok(stream) = tls_acceptor.accept(cnx).await else {
-                log::error!("Error during tls handshake connection from {}", addr);
-                return;
+            let tls_stream = match tls_acceptor.accept(tcp_stream).await {
+                Ok(s) => s,
+                Err(e) => {
+                    log::error!("Error during TLS handshake: {:?}", e);
+                    return;
+                }
             };
 
-            let stream = TokioIo::new(stream);
-
-            let hyper_service = hyper::service::service_fn(move |request: Request<Incoming>| {
-                tower_service.clone().call(request)
-            });
-
-            let ret = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
-                .serve_connection_with_upgrades(stream, hyper_service)
+            let _ = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
+                .serve_connection(TokioIo::new(tls_stream), service)
                 .await;
-
-            if let Err(err) = ret {
-                log::warn!("eError serving connection from {}: {}", addr, err);
-            }
         });
     }
+}
+
+async fn wrapper(req: Request<Incoming>, proxy_bridge: Arc<ProxyBridge>) -> Result<Response<GatewayBody>, hyper::Error> {
+    Ok(proxy_bridge.determine(req).await)
 }
 
 fn rustls_server_config(key: impl AsRef<Path>, cert: impl AsRef<Path>) -> Result<Arc<ServerConfig>, Box<dyn std::error::Error>> {
