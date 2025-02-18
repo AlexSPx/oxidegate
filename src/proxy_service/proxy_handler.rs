@@ -1,6 +1,6 @@
 use hyper::{body::Incoming, Request, Response, StatusCode, Uri};
 use hyper_rustls::{ConfigBuilderExt, HttpsConnector};
-use hyper_util::{client::legacy::{connect::HttpConnector, Client}, rt::{TokioExecutor, TokioIo}};
+use hyper_util::{client::legacy::{connect::HttpConnector, Client}, rt::TokioExecutor};
 use tokio::time::timeout;
 use tokio_rustls::rustls;
 use std::sync::Arc;

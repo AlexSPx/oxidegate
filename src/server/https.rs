@@ -1,4 +1,4 @@
-use std::{net::{Ipv4Addr, SocketAddr}, path::{Path, PathBuf}, sync::Arc};
+use std::{net::SocketAddr, path::{Path, PathBuf}, sync::Arc};
 
 use hyper::{body::Incoming, service::service_fn, Request, Response};
 use hyper_util::rt::{TokioExecutor, TokioIo};
