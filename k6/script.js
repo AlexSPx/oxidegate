@@ -5,6 +5,8 @@ export const options = {
   stages: [
     { duration: '30s', target: 1000 }, // Ramp-up
     { duration: '1m', target: 2000 },  // Sustained load
+    { duration: '1m', target: 5000 },
+    { duration: '1m', target: 10000 },
     { duration: '30s', target: 0 },    // Ramp-down
   ],
 };
