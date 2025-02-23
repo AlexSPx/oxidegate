@@ -2,7 +2,7 @@ use std::{net::SocketAddr, path::{Path, PathBuf}, sync::Arc};
 
 use hyper::{body::Incoming, service::service_fn, Request, Response};
 use hyper_util::rt::{TokioExecutor, TokioIo};
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, time};
 use tokio_rustls::{rustls::{pki_types::{pem::PemObject, CertificateDer, PrivateKeyDer}, ServerConfig}, TlsAcceptor};
 
 use crate::proxy_service::{gateway_body::GatewayBody, proxy_bridge::ProxyBridge};
@@ -18,25 +18,34 @@ pub async fn start_https_server(address: SocketAddr, proxy_bridge: Arc<ProxyBrid
     let tls_acceptor = TlsAcceptor::from(rustls_config);
 
     loop {
-        let (tcp_stream, _) = tcp_listener.accept().await?;
+        match tcp_listener.accept().await {
+            Ok((tcp_stream, _)) => {
+                let tls_acceptor = tls_acceptor.clone();
+                let proxy_bridge = Arc::clone(&proxy_bridge);
 
-        let tls_acceptor = tls_acceptor.clone();
-        let proxy_bridge = Arc::clone(&proxy_bridge);
+                let service = Arc::new(service_fn(move |req| wrapper(req, proxy_bridge.clone())));
+                tokio::spawn(async move {
+                    let tls_stream = match tls_acceptor.accept(tcp_stream).await {
+                        Ok(s) => s,
+                        Err(e) => {
+                            log::error!("Error during TLS handshake: {:?}", e);
+                            return;
+                        }
+                    };  
 
-        let service = Arc::new(service_fn(move |req| wrapper(req, proxy_bridge.clone())));
-        tokio::spawn(async move {
-            let tls_stream = match tls_acceptor.accept(tcp_stream).await {
-                Ok(s) => s,
-                Err(e) => {
-                    log::error!("Error during TLS handshake: {:?}", e);
-                    return;
-                }
-            };
+                    let _ = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
+                        .serve_connection(TokioIo::new(tls_stream), service)
+                        .await;
+                });       
+            },
+            Err(e) => {
+                log::warn!("Failed to accept connection {:?}", e);
 
-            let _ = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())
-                .serve_connection(TokioIo::new(tls_stream), service)
-                .await;
-        });
+                time::sleep(time::Duration::from_millis(10)).await;
+
+                continue;
+            },
+        }
     }
 }
 
