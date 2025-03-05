@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use cloud_native_proxy::{types::BackendServer, LbAlgorithm, LeastConnectionsStrategy, LoadBalancer, LoadBalancerFactory, RoundRobinStrategy, WeightedRoundRobin};
+    use oxidegate::{types::BackendServer, LbAlgorithm, LeastConnectionsStrategy, LoadBalancer, LoadBalancerFactory, RoundRobinStrategy, WeightedRoundRobin};
     use std::{collections::HashMap, sync::{atomic::Ordering, Arc}};
 
     #[tokio::test]

@@ -234,24 +234,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cloud-native-proxy"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "env_logger",
- "hyper",
- "hyper-rustls",
- "hyper-util",
- "log",
- "mockall",
- "serde",
- "serde_yaml",
- "tokio",
- "tokio-rustls",
- "tokio-test",
-]
-
-[[package]]
 name = "cmake"
 version = "0.1.54"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -772,6 +754,24 @@ name = "openssl-probe"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d05e27ee213611ffe7d6348b942e8f942b37114c00cc03cec254295a4a17852e"
+
+[[package]]
+name = "oxidegate"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "env_logger",
+ "hyper",
+ "hyper-rustls",
+ "hyper-util",
+ "log",
+ "mockall",
+ "serde",
+ "serde_yaml",
+ "tokio",
+ "tokio-rustls",
+ "tokio-test",
+]
 
 [[package]]
 name = "parking_lot"

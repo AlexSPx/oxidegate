@@ -21,8 +21,8 @@ RUN apt-get update && \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* 
 
-COPY --from=build /app/target/release/cloud-native-proxy /usr/local/bin/
+COPY --from=build /app/target/release/oxidegate /usr/local/bin/
 
 EXPOSE 80 443 3000
 
-CMD ["/usr/local/bin/cloud-native-proxy"]
+CMD ["/usr/local/bin/oxidegate"]

@@ -1,5 +1,5 @@
 [package]
-name = "cloud-native-proxy"
+name = "oxidegate"
 version = "0.1.0"
 edition = "2021"
 
