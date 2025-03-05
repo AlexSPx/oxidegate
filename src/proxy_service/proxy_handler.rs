@@ -31,7 +31,7 @@ impl ProxyHandler {
         let client: Client<_, GatewayBody> = Client::builder(TokioExecutor::new()).build(https);
 
         Self {
-            client: client,
+            client,
             load_balancer: balancer,
         }
     }
@@ -70,14 +70,17 @@ impl ProxyHandler {
         let new_req = Request::builder()
             .method(method)
             .uri(uri)
-            .body(GatewayBody::from(GatewayBody::Incomming(body)))
+            .body(GatewayBody::Incomming(body))
             .map_err(|e| {
                 log::error!("Failed to build request: {}", e);
                 e
             });
 
-        let mut new_req = match new_req {
-            Ok(req) => req,
+        let new_req = match new_req {
+            Ok(mut req) => {
+                *req.headers_mut() = headers;
+                req
+            },
             Err(_) => {
             return Response::builder()
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
@@ -86,12 +89,10 @@ impl ProxyHandler {
             }
         };
 
-        *new_req.headers_mut() = headers;
-
         match timeout(timeout_duration, self.client.request(new_req)).await {
             Ok(Ok(res)) => {
                 let (parts, body) = res.into_parts();
-                let body = GatewayBody::from(GatewayBody::Incomming(body));
+                let body = GatewayBody::Incomming(body);
                 Response::from_parts(parts, body)
             },
             Ok(Err(e)) => {

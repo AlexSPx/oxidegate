@@ -5,7 +5,7 @@ use super::{least_connections_lb::LeastConnectionsStrategy, round_robin_lb::Roun
 
 pub struct SelectedLB {
     pub server: String,
-    pub cleanup_fn: Box<dyn Fn() -> () + Send + Sync>,
+    pub cleanup_fn: Box<dyn Fn() + Send + Sync>,
 }
 
 impl Drop for SelectedLB {
