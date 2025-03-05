@@ -1,5 +1,6 @@
 server:
-  enable_https: false
+  enable_https: true
+  port: 3000
   key_path: "certs/key.pem"
   cert_path: "certs/cert.pem"
 

@@ -7,10 +7,10 @@ use tokio_rustls::{rustls::{pki_types::{pem::PemObject, CertificateDer, PrivateK
 
 use crate::proxy_service::{gateway_body::GatewayBody, proxy_bridge::ProxyBridge};
 
-pub async fn start_https_server(address: SocketAddr, proxy_bridge: Arc<ProxyBridge>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start_https_server(address: SocketAddr, proxy_bridge: Arc<ProxyBridge>, key_path: &str, cert_path: &str) -> Result<(), Box<dyn std::error::Error>> {
     let rustls_config =  rustls_server_config(
-      PathBuf::from("certs/key.pem"),
-        PathBuf::from("certs/cert.pem"),  
+      PathBuf::from(key_path),
+        PathBuf::from(cert_path),  
     )?;
 
 

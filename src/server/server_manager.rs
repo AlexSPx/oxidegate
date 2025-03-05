@@ -19,10 +19,14 @@ impl ServerManager {
 
     pub async fn start_server(&self) -> Result<(), Box<dyn std::error::Error>> {
 
-        let address: SocketAddr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), self.settings.port);
+        let address: SocketAddr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), self.settings.port);
 
         if self.settings.enable_https {
-            start_https_server(address, Arc::clone(&self.proxy_bridge)).await
+            start_https_server(address,
+                 Arc::clone(&self.proxy_bridge),
+                    self.settings.key_path.as_ref().unwrap(),
+                    self.settings.cert_path.as_ref().unwrap()
+                ).await
         } else {
             start_http_server(address, Arc::clone(&self.proxy_bridge)).await
         }

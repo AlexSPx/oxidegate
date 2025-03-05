@@ -43,9 +43,9 @@ impl ProxyHandler {
         match selected_lb {
             Some(backend) => {
                 let backend_uri = self.build_backend_uri(&req, &backend.server);
-                *req.uri_mut() = backend_uri;
+                log::debug!("Proxying request to: {}", backend_uri);
 
-                self.proxy_request(req).await
+                self.proxy_request(req, &backend_uri).await
             },
             None => Response::builder()
                 .status(StatusCode::SERVICE_UNAVAILABLE)
@@ -59,14 +59,34 @@ impl ProxyHandler {
         format!("{}{}", backend, path).parse().unwrap()
     }
 
-    async fn proxy_request(&self ,req: Request<Incoming>) -> Response<GatewayBody> {
+    async fn proxy_request(&self ,req: Request<Incoming>, backend_uri: &Uri) -> Response<GatewayBody> {
         let timeout_duration = std::time::Duration::from_secs(5);
 
+        let headers = req.headers().clone();
+        let method = req.method().clone();
+        let uri = backend_uri;
+        let body = req.into_body();
+
         let new_req = Request::builder()
-            .method(req.method())
-            .uri(req.uri())
-            .body(GatewayBody::from(GatewayBody::Incomming(req.into_body())))
-            .unwrap();
+            .method(method)
+            .uri(uri)
+            .body(GatewayBody::from(GatewayBody::Incomming(body)))
+            .map_err(|e| {
+                log::error!("Failed to build request: {}", e);
+                e
+            });
+
+        let mut new_req = match new_req {
+            Ok(req) => req,
+            Err(_) => {
+            return Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(GatewayBody::Empty)
+                .unwrap();
+            }
+        };
+
+        *new_req.headers_mut() = headers;
 
         match timeout(timeout_duration, self.client.request(new_req)).await {
             Ok(Ok(res)) => {
@@ -74,14 +94,23 @@ impl ProxyHandler {
                 let body = GatewayBody::from(GatewayBody::Incomming(body));
                 Response::from_parts(parts, body)
             },
-            Ok(Err(_)) => Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .body(GatewayBody::Empty)
-                .unwrap(),
-            Err(_) => Response::builder()
-                .status(StatusCode::BAD_GATEWAY)
-                .body(GatewayBody::Empty)
-                .unwrap(),
+            Ok(Err(e)) => {
+                log::warn!("Error proxying request: {}", e);
+                log::debug!("Connection info: {:?}", e.connect_info());
+                
+                Response::builder()
+                    .status(StatusCode::BAD_GATEWAY)
+                    .body(GatewayBody::Empty)
+                    .unwrap()
+            },
+            Err(e) => {
+                log::warn!("Request timed out: {}", e);
+
+                Response::builder()
+                    .status(StatusCode::BAD_GATEWAY)
+                    .body(GatewayBody::Empty)
+                    .unwrap()
+            },
         }
     }
 }
