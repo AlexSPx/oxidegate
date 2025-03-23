@@ -8,7 +8,7 @@ use crate::proxy_service::{gateway_body::GatewayBody, proxy_bridge::ProxyBridge}
 
 pub async fn start_http_server(
     address: SocketAddr,
-    proxy_bridge: Arc<ProxyBridge>,
+    proxy_bridge: &Arc<ProxyBridge>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let tcp_listener = TcpListener::bind(&address).await?;
 
