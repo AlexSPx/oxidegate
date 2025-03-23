@@ -14,7 +14,7 @@ leverages modern asynchronous programming techniques to provide efficient and sc
 ## Docker Image
 
 ```bash
-docker push alexspx/oxidegate:latest
+docker pull alexspx/oxidegate:latest
 ```
 
 ## Configuration File
