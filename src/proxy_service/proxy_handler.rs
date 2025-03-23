@@ -1,9 +1,12 @@
 use hyper::{body::Incoming, Request, Response, StatusCode, Uri};
 use hyper_rustls::{ConfigBuilderExt, HttpsConnector};
-use hyper_util::{client::legacy::{connect::HttpConnector, Client}, rt::TokioExecutor};
+use hyper_util::{
+    client::legacy::{connect::HttpConnector, Client},
+    rt::TokioExecutor,
+};
+use std::sync::Arc;
 use tokio::time::timeout;
 use tokio_rustls::rustls;
-use std::sync::Arc;
 
 use crate::load_balancer::factory::LoadBalancer;
 
@@ -19,7 +22,8 @@ pub struct ProxyHandler {
 impl ProxyHandler {
     pub fn new(balancer: Arc<dyn LoadBalancer>) -> Self {
         let c = rustls::ClientConfig::builder()
-            .with_native_roots().unwrap()
+            .with_native_roots()
+            .unwrap()
             .with_no_client_auth();
 
         let https = hyper_rustls::HttpsConnectorBuilder::new()
@@ -36,17 +40,16 @@ impl ProxyHandler {
         }
     }
 
-    pub async fn handle(&self, mut req: Request<Incoming>) -> Response<GatewayBody> {
-
+    pub async fn handle(&self, req: Request<Incoming>) -> Response<GatewayBody> {
         let selected_lb = self.load_balancer.next().await;
-        
+
         match selected_lb {
             Some(backend) => {
                 let backend_uri = self.build_backend_uri(&req, &backend.server);
                 log::debug!("Proxying request to: {}", backend_uri);
 
                 self.proxy_request(req, &backend_uri).await
-            },
+            }
             None => Response::builder()
                 .status(StatusCode::SERVICE_UNAVAILABLE)
                 .body(GatewayBody::Empty)
@@ -55,11 +58,19 @@ impl ProxyHandler {
     }
 
     fn build_backend_uri(&self, req: &Request<Incoming>, backend: &str) -> Uri {
-        let path = req.uri().path_and_query().map(|p| p.as_str()).unwrap_or("/");
+        let path = req
+            .uri()
+            .path_and_query()
+            .map(|p| p.as_str())
+            .unwrap_or("/");
         format!("{}{}", backend, path).parse().unwrap()
     }
 
-    async fn proxy_request(&self ,req: Request<Incoming>, backend_uri: &Uri) -> Response<GatewayBody> {
+    async fn proxy_request(
+        &self,
+        req: Request<Incoming>,
+        backend_uri: &Uri,
+    ) -> Response<GatewayBody> {
         let timeout_duration = std::time::Duration::from_secs(5);
 
         let headers = req.headers().clone();
@@ -80,12 +91,12 @@ impl ProxyHandler {
             Ok(mut req) => {
                 *req.headers_mut() = headers;
                 req
-            },
+            }
             Err(_) => {
-            return Response::builder()
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .body(GatewayBody::Empty)
-                .unwrap();
+                return Response::builder()
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .body(GatewayBody::Empty)
+                    .unwrap();
             }
         };
 
@@ -94,16 +105,16 @@ impl ProxyHandler {
                 let (parts, body) = res.into_parts();
                 let body = GatewayBody::Incomming(body);
                 Response::from_parts(parts, body)
-            },
+            }
             Ok(Err(e)) => {
                 log::warn!("Error proxying request: {}", e);
                 log::debug!("Connection info: {:?}", e.connect_info());
-                
+
                 Response::builder()
                     .status(StatusCode::BAD_GATEWAY)
                     .body(GatewayBody::Empty)
                     .unwrap()
-            },
+            }
             Err(e) => {
                 log::warn!("Request timed out: {}", e);
 
@@ -111,7 +122,7 @@ impl ProxyHandler {
                     .status(StatusCode::BAD_GATEWAY)
                     .body(GatewayBody::Empty)
                     .unwrap()
-            },
+            }
         }
     }
 }

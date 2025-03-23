@@ -35,11 +35,15 @@ pub struct Backend {
 pub enum LbAlgorithm {
     RoundRobin,
     LeastConnections,
-    WeightedRoundRobin
+    WeightedRoundRobin,
 }
 
-fn default_lb_algorithm() -> LbAlgorithm { LbAlgorithm::RoundRobin }
-fn default_port() -> u16 { 3000 }
+fn default_lb_algorithm() -> LbAlgorithm {
+    LbAlgorithm::RoundRobin
+}
+fn default_port() -> u16 {
+    3000
+}
 
 impl Default for ServerSettings {
     fn default() -> Self {
@@ -50,5 +54,4 @@ impl Default for ServerSettings {
             key_path: None,
         }
     }
-    
 }

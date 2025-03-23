@@ -1,5 +1,8 @@
-use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
 use crate::types::BackendServer;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
 use super::factory::{LoadBalancer, SelectedLB};
 
@@ -11,10 +14,20 @@ pub struct WeightedRoundRobin {
 
 impl WeightedRoundRobin {
     pub fn new(servers: Vec<BackendServer>) -> Self {
-        let total_weight = servers.iter().map(|server| server.weight.unwrap_or(1)).sum();
-        log::info!("WeightedRoundRobinStrategy initialized with servers: {:?}, total_weight: {}", servers, total_weight);
+        let total_weight = servers
+            .iter()
+            .map(|server| server.weight.unwrap_or(1))
+            .sum();
+        log::info!(
+            "WeightedRoundRobinStrategy initialized with servers: {:?}, total_weight: {}",
+            servers,
+            total_weight
+        );
         Self {
-            servers: servers.into_iter().map(|server| (server.server, server.weight.unwrap_or(1))).collect(),
+            servers: servers
+                .into_iter()
+                .map(|server| (server.server, server.weight.unwrap_or(1)))
+                .collect(),
             current: AtomicUsize::new(0),
             total_weight,
         }
@@ -45,11 +58,9 @@ impl LoadBalancer for WeightedRoundRobin {
 
         let empty_fn = Box::new(move || {});
 
-        Some(Arc::new(
-            SelectedLB {
-                server: server.clone(),
-                cleanup_fn: empty_fn,
-            }
-        ))
+        Some(Arc::new(SelectedLB {
+            server: server.clone(),
+            cleanup_fn: empty_fn,
+        }))
     }
 }

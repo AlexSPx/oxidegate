@@ -1,11 +1,21 @@
 #[cfg(test)]
 mod tests {
-    use oxidegate::{types::BackendServer, LbAlgorithm, LeastConnectionsStrategy, LoadBalancer, LoadBalancerFactory, RoundRobinStrategy, WeightedRoundRobin};
-    use std::{collections::HashMap, sync::{atomic::Ordering, Arc}};
+    use oxidegate::{
+        types::BackendServer, LbAlgorithm, LeastConnectionsStrategy, LoadBalancer,
+        LoadBalancerFactory, RoundRobinStrategy, WeightedRoundRobin,
+    };
+    use std::{
+        collections::HashMap,
+        sync::{atomic::Ordering, Arc},
+    };
 
     #[tokio::test]
     async fn test_least_connections_strategy() {
-        let servers = vec!["server1".to_string(), "server2".to_string(), "server3".to_string()];
+        let servers = vec![
+            "server1".to_string(),
+            "server2".to_string(),
+            "server3".to_string(),
+        ];
         let strategy = LeastConnectionsStrategy::new(servers.clone());
 
         for (_, connections) in &strategy.servers {
@@ -36,7 +46,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_round_robin_strategy() {
-        let servers = vec!["server1".to_string(), "server2".to_string(), "server3".to_string()];
+        let servers = vec![
+            "server1".to_string(),
+            "server2".to_string(),
+            "server3".to_string(),
+        ];
         let strategy = RoundRobinStrategy::new(servers.clone());
 
         let selected = strategy.next().await.unwrap();
@@ -72,8 +86,7 @@ mod tests {
         let strategy = WeightedRoundRobin::new(servers.clone());
 
         let expected_servers = vec![
-            "server1", "server2", "server2", 
-            "server3", "server3", "server3"
+            "server1", "server2", "server2", "server3", "server3", "server3",
         ];
 
         for expected in expected_servers {
@@ -96,7 +109,8 @@ mod tests {
         ];
 
         let round_robin_lb = LoadBalancerFactory::create(LbAlgorithm::RoundRobin, servers.clone());
-        let least_connections_lb = LoadBalancerFactory::create(LbAlgorithm::LeastConnections, servers.clone());
+        let least_connections_lb =
+            LoadBalancerFactory::create(LbAlgorithm::LeastConnections, servers.clone());
 
         let selected = round_robin_lb.next().await.unwrap();
         assert_eq!(selected.server, "server1");

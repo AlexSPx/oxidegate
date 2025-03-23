@@ -1,4 +1,7 @@
-use std::sync::{atomic::{AtomicUsize, Ordering}, Arc};
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 
 use super::factory::{LoadBalancer, SelectedLB};
 
@@ -27,11 +30,9 @@ impl LoadBalancer for RoundRobinStrategy {
 
         let empty_fn = Box::new(move || {});
 
-        Some(Arc::new(
-            SelectedLB {
-                server: server.clone(),
-                cleanup_fn: empty_fn,
-            }
-        ))
+        Some(Arc::new(SelectedLB {
+            server: server.clone(),
+            cleanup_fn: empty_fn,
+        }))
     }
 }

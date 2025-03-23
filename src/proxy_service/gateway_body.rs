@@ -1,11 +1,13 @@
 use std::{pin::Pin, task::Poll};
 
-use hyper::{body::{Body, Bytes, Incoming}, Error};
-
+use hyper::{
+    body::{Body, Bytes, Incoming},
+    Error,
+};
 
 pub enum GatewayBody {
     Incomming(Incoming),
-    Empty
+    Empty,
 }
 
 impl Body for GatewayBody {
@@ -18,12 +20,8 @@ impl Body for GatewayBody {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Result<hyper::body::Frame<Self::Data>, Self::Error>>> {
         match &mut *self.get_mut() {
-            GatewayBody::Incomming(incoming) => {
-                Pin::new(incoming).poll_frame(cx) 
-            },
-            GatewayBody::Empty => {
-                Poll::Ready(None)
-            },
+            GatewayBody::Incomming(incoming) => Pin::new(incoming).poll_frame(cx),
+            GatewayBody::Empty => Poll::Ready(None),
         }
     }
 }
