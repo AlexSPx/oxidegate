@@ -4,10 +4,7 @@ mod tests {
         types::BackendServer, LbAlgorithm, LeastConnectionsStrategy, LoadBalancer,
         LoadBalancerFactory, RoundRobinStrategy, WeightedRoundRobin,
     };
-    use std::{
-        collections::HashMap,
-        sync::{atomic::Ordering, Arc},
-    };
+    use std::sync::{atomic::Ordering, Arc};
 
     #[tokio::test]
     async fn test_least_connections_strategy() {

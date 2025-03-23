@@ -32,7 +32,7 @@ pub async fn start_https_server(
         match tcp_listener.accept().await {
             Ok((tcp_stream, _)) => {
                 let tls_acceptor = tls_acceptor.clone();
-                let proxy_bridge = Arc::clone(&proxy_bridge);
+                let proxy_bridge = proxy_bridge.clone();
 
                 let service = Arc::new(service_fn(move |req| wrapper(req, proxy_bridge.clone())));
                 tokio::spawn(async move {
