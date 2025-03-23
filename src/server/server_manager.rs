@@ -26,13 +26,13 @@ impl ServerManager {
         if self.settings.enable_https {
             start_https_server(
                 address,
-                Arc::clone(&self.proxy_bridge),
+                &self.proxy_bridge,
                 self.settings.key_path.as_ref().unwrap(),
                 self.settings.cert_path.as_ref().unwrap(),
             )
             .await
         } else {
-            start_http_server(address, Arc::clone(&self.proxy_bridge)).await
+            start_http_server(address, &self.proxy_bridge).await
         }
     }
 }
