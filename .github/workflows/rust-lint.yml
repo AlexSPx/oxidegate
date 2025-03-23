@@ -1,0 +1,53 @@
+name: Rust Lint
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run cargo fmt
+        id: fmt
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo clippy
+        id: clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Post comment on PR if lint fails
+        if: ${{ failure() && github.event_name == 'pull_request' }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fmtFailed = steps.fmt.outcome === 'failure';
+            const clippyFailed = steps.clippy.outcome === 'failure';
+            let message = '### :x: Linting failed\n\n';
+            if (fmtFailed) {
+              message += '- `cargo fmt` check failed. Please format your code.\n';
+            }
+            if (clippyFailed) {
+              message += '- `cargo clippy` check failed. Please fix the linting issues.\n';
+            }
+            message += '\nPlease address these issues and push the changes.';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message,
+            });
