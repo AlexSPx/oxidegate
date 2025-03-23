@@ -19,7 +19,7 @@ use crate::proxy_service::{gateway_body::GatewayBody, proxy_bridge::ProxyBridge}
 
 pub async fn start_https_server(
     address: SocketAddr,
-    proxy_bridge: &Arc<ProxyBridge>,
+    proxy_bridge: Arc<ProxyBridge>,
     key_path: &str,
     cert_path: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
